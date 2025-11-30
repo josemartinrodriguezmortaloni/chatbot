@@ -1,16 +1,18 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { Experimental_Agent as Agent } from 'ai';
-import { Cache } from 'cache-manager';
 import { getModel } from '../common/model-registry';
-
+import { SystemPromptService } from '../prompts/chat/system-prompt';
 /**
  * Servicio de chat que procesa mensajes usando modelos de IA configurados.
  * Utiliza el registro de modelos para obtener modelos listos para usar.
  */
 @Injectable()
 export class ChatService {
-  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+  constructor(
+    private system: SystemPromptService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   /**
    * Procesa un mensaje de chat usando un modelo de IA configurado.
@@ -26,6 +28,7 @@ export class ChatService {
     modelId: 'gpt-5.1' | 'claude-opus-4.5' | 'gemini-3-pro' = 'gpt-5.1',
   ) {
     try {
+      const systemPrompt = this.system.getSystemPrompt();
       console.log('Processing message...');
 
       // Obtener modelo configurado y listo para usar
@@ -34,7 +37,7 @@ export class ChatService {
       // Crear agente con el modelo configurado
       const agent = new Agent({
         model,
-        system: 'You are a helpfull assistant',
+        system: systemPrompt,
       });
 
       const result = await agent.generate({ prompt: question });
@@ -42,7 +45,7 @@ export class ChatService {
 
       return result.text;
     } catch (error) {
-      throw new Error(`Failed to process IA message: ${error.message}`);
+      throw new Error(`Failed to process IA message: ${error}`);
     }
   }
 }
